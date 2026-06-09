@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+dynamic = ["version"]
+name = "speculare"
+dependencies = [
+    "msgspec>=0.20.0,<1",
+    "typing_extensions>=4.0.0",
+    "packaging>=26.0,<27.0",
+]
+requires-python = ">=3.12"
+authors = [
+    { name = "vmphase" },
+    { name = "Soheab" },
+    { name = "DA-344 (aka Developer Anonymous)" },
+]
+maintainers = [
+    { name = "vmphase" },
+    { name = "DA-344 (aka Developer Anonymous)" },
+    { name = "Soheab" },
+]
+description = "TBD"
+readme = "README.md"
+license = { text = "MIT" }
+keywords = [
+    "speculare",
+    "sonolink",
+    "discord",
+    "bot",
+    "library",
+    "python",
+    "asyncio",
+    "discord.py",
+    "pycord",
+    "py-cord",
+    "disnake",
+    "nextcord",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Framework :: AsyncIO",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Internet",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+    "Typing :: Typed",
+]
+
+[project.optional-dependencies]
+docs = [
+    "sphinx>=9.1.0",
+    "furo",
+    "sphinx-copybutton",
+    "sphinx-autobuild>=2024.10.3",
+]
+
+[project.urls]
+Repository = "https://github.com/sonolink/speculare"
+
+[tool.basedpyright]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+reportPrivateUsage = false
+reportUnnecessaryComparison = false
+reportUnnecessaryIsInstance = false
+reportImplicitAbstractClass = true
+exclude = ["docs/"]
+
+[tool.ruff]
+exclude = ["docs/"]
+
+[tool.ruff.lint]
+ignore = ["F405", "F403"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-wrap-aliases = true
+
+[tool.setuptools.dynamic]
+version = { attr = "speculare._version.__version__" }
