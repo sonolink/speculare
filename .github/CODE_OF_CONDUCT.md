@@ -2,7 +2,7 @@
 
 ## Our Pledge
 
-SonoLink is built by and for people. As contributors and maintainers, we are
+Speculare is built by and for people. As contributors and maintainers, we are
 committed to ensuring that participation in this project remains a positive
 experience for everyone regardless of race, ethnicity, caste, color, age, physical characteristics, neurodiversity, disability, sex or gender, gender identity or expression, sexual orientation, language, philosophy or religion, national or social origin, socio-economic position, level of education, or other status.
 
@@ -37,7 +37,7 @@ is harmful to the project or its community.
 
 ## Scope
 
-This Code of Conduct covers all spaces associated with SonoLink: the
+This Code of Conduct covers all spaces associated with Speculare: the
 repository, issue tracker, Discord server, and any other official channel.
 It also applies whenever someone is acting as a representative of the project
 in public, for example: at an event, on social media, or via an official
