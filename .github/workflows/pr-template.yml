@@ -1,0 +1,27 @@
+name: PR Follows Template
+
+on:
+    pull_request_target:
+        types: [opened, edited, synchronize, reopened]
+
+permissions:
+    pull-requests: write
+    issues: write
+    contents: read
+
+jobs:
+    template-check:
+        runs-on: ubuntu-latest
+        if: github.actor != 'renovate[bot]'
+        steps:
+            - name: Checkout base branch
+              uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+            - name: Enforce Template
+              uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  script: |
+                      const path = require('path');
+                      const script = require(path.resolve('.github/scripts/pr-template.js'));
+                      await script({ github, context, core });
