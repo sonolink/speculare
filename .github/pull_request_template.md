@@ -19,13 +19,13 @@
 
 ### Code & Review
 - [ ] I have self-reviewed my changes.
-- [ ] My code follows the **strict typing** standards of Sonolink.
+- [ ] My code follows Speculare's **strict typing** standards.
 - [ ] Complex or non-obvious logic is documented where appropriate.
 - [ ] No dead code, debug prints, or leftover TODOs introduced.
 ### Documentation & Compatibility
-- [ ] I have updated the documentation/docstrings to reflect these changes.
-- [ ] I have verified that my changes are compatible with the latest Lavalink version.
-- [ ] Public API surface is unchanged, or changes are intentional and documented.
+- [ ] I have updated documentation and/or docstrings where applicable.
+- [ ] I have verified that my changes are compatible with the latest adapters versions.
+- [ ] Public API changes are intentional and documented.
 ### Validation
-- [ ] I have tested these changes in a live environment or with mock nodes.
-- [ ] This PR is **not** a code change (e.g., documentation only).
+- [ ] I have tested these changes in a live environment.
+- [ ] This PR contains no runtime code changes (documentation/configuration only).
