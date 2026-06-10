@@ -2,6 +2,7 @@ from collections.abc import Coroutine
 from typing import Any
 
 from .core.libraries.factory import DiscordBotFactory
+from .features.eval import EvalFeature
 
 
 class OptionalAwait:
@@ -15,18 +16,16 @@ class OptionalAwait:
         return result
 
 
-def actual_setup(bot: Any) -> None:
-    from .features import EvalFeature
-
+def _register_features(bot: Any) -> None:
     EvalFeature().handle(bot)
 
 
 async def async_setup(bot: DiscordBotFactory) -> None:
-    actual_setup(bot)
+    _register_features(bot)
 
 
 def sync_setup(bot: DiscordBotFactory) -> None:
-    actual_setup(bot)
+    _register_features(bot)
 
 
 def setup(bot: Any) -> Coroutine[Any, Any, None] | None:
