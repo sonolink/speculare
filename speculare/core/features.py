@@ -96,19 +96,6 @@ class Feature:
         description: str,
         category: str | None = None,
     ) -> None:
-        cls_name = cls.__name__
-        if not cls_name.endswith("Feature"):
-            raise ValueError(
-                f"Feature class names must end with 'Feature' (got: {cls_name})."
-            )
-
-        feature_name = cls_name.split("Feature")[0]
-        if name.casefold() != feature_name.casefold():
-            raise ValueError(
-                f"Feature name must match the class name (case-insensitive). "
-                f"Expected '{feature_name.lower()}', got '{name}'."
-            )
-
         cls.name: str = name
         cls.description: str = description
         cls.category: str | None = category
