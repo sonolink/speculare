@@ -58,8 +58,6 @@ class NextcordBot(DiscordBot[commands.Bot]):
     def _inject_fake_interaction(
         self, callback: Callable[..., Any]
     ) -> Callable[..., Any]:
-        print("Injecting fake interaction into callback", callback)
-
         from nextcord import Interaction
 
         async def wrapper(
@@ -76,10 +74,7 @@ class NextcordBot(DiscordBot[commands.Bot]):
         if not params:
             return callback
 
-        # [self, ctx: CommandContext, ...]
         new_parameters: list[inspect.Parameter] = list(params.values())
-        # ctx: CommandContext -> ctx: ApplicationCommandInteraction
-        print("existing parameters", new_parameters)
 
         for i, param in enumerate(new_parameters):
             if param.name != "self" and i in (0, 1):
@@ -91,7 +86,6 @@ class NextcordBot(DiscordBot[commands.Bot]):
 
         new_parameters = new_parameters[1:]  # remove self
 
-        print("new_parameters after", new_parameters)
         wrapper.__signature__ = sig.replace(parameters=new_parameters)  # pyright: ignore[reportFunctionMemberAccess]
         wrapper.__qualname__ = callback.__qualname__
         wrapper.__name__ = callback.__name__
