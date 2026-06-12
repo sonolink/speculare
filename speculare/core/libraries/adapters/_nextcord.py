@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import nextcord
 from nextcord.ext import commands
@@ -20,8 +21,47 @@ class NextcordBot(DiscordBot[commands.Bot]):
         self._cog: commands.Cog = commands.Cog.__new__(commands.Cog)
         self._cog.__cog_name__ = "speculare"
 
-    def _register_prefix(self, cmd: commands.Command[Any, Any, Any]) -> None:
-        cmd.cog = self._cog
+    def parse_args_and_kwargs(
+        self, args: tuple[Any, ...], kwargs: dict[str, Any]
+    ) -> tuple[Any, tuple[Any, ...], dict[str, Any]]:
+        for i, arg in enumerate(args):
+            if isinstance(arg, (nextcord.Interaction, commands.Context)):
+                kwargs.pop("self", None)
+                return cast(Any, arg), args[i + 1 :], kwargs
+        raise ValueError("Expected at least one positional argument for context.")
+
+    def _inject_fake_interaction(
+        self, callback: Callable[..., Any]
+    ) -> Callable[..., Any]:
+        sig = inspect.signature(callback)
+        parameters = list(sig.parameters.values())
+        if not parameters:
+            return callback
+
+        if parameters[0].name == "self":
+            parameters = parameters[1:]
+            if not parameters:
+                return callback
+
+        async def wrapper(ctx: Any, *args: Any, **kwargs: Any) -> Any:
+            return await callback(ctx, *args, **kwargs)
+
+        parameters[0] = parameters[0].replace(
+            annotation=nextcord.Interaction,
+            kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        )
+        new_sig = sig.replace(parameters=parameters)
+        wrapper.__signature__ = new_sig  # pyright: ignore[reportFunctionMemberAccess]
+        wrapper.__annotations__ = {
+            p.name: p.annotation
+            for p in parameters
+            if p.annotation is not inspect.Parameter.empty
+        }
+        if sig.return_annotation is not inspect.Signature.empty:
+            wrapper.__annotations__["return"] = sig.return_annotation
+        wrapper.__qualname__ = callback.__qualname__
+        wrapper.__name__ = callback.__name__
+        return wrapper
 
     def add_prefix_group(
         self,
@@ -38,7 +78,7 @@ class NextcordBot(DiscordBot[commands.Bot]):
             **extras,
         )
         group.cog = self._cog
-        self._bot.add_command(group)
+        self._bot.add_command(group)  # type: ignore[arg-type]
         return group
 
     def add_prefix_command(
@@ -50,65 +90,15 @@ class NextcordBot(DiscordBot[commands.Bot]):
         parent: commands.Group[Any, ..., Any] | None = None,
         **extras: Any,
     ) -> commands.Command[Any, Any, Any]:
-        cmd = commands.Command(callback, name=name, description=description, **extras)
+        cmd = commands.Command(
+            callback,
+            name=name,
+            description=description,
+            **extras,
+        )
         cmd.cog = self._cog
-        (parent or self._bot).add_command(cmd)
+        (parent or self._bot).add_command(cmd)  # type: ignore[arg-type]
         return cmd
-
-    def _inject_fake_interaction(
-        self, callback: Callable[..., Any]
-    ) -> Callable[..., Any]:
-        from nextcord import Interaction
-
-        async def wrapper(
-            ctx,
-            *args: Any,
-            **kwargs: Any,
-        ) -> Any:
-            return await callback(ctx, *args, **kwargs)
-
-        import inspect
-
-        sig = inspect.signature(callback)
-        params = sig.parameters
-        if not params:
-            return callback
-
-        new_parameters: list[inspect.Parameter] = list(params.values())
-
-        for i, param in enumerate(new_parameters):
-            if param.name != "self" and i in (0, 1):
-                param = param.replace(
-                    annotation=Interaction,
-                    kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                )
-                new_parameters[i] = param
-
-        new_parameters = new_parameters[1:]  # remove self
-
-        wrapper.__signature__ = sig.replace(parameters=new_parameters)  # pyright: ignore[reportFunctionMemberAccess]
-        wrapper.__qualname__ = callback.__qualname__
-        wrapper.__name__ = callback.__name__
-        return wrapper
-
-    def parse_args_and_kwargs(
-        self, args: tuple[Any, ...], kwargs: dict[str, Any]
-    ) -> tuple[tuple[Any, ...], dict[str, Any]]:
-        if not args:
-            raise ValueError("Expected at least one positional argument for context.")
-
-        ctx_interaction_arg: Any = None
-        remaining_args: tuple[Any, ...] = ()
-        for i, arg in enumerate(args):
-            if isinstance(arg, (nextcord.Interaction, commands.Context)):
-                ctx_interaction_arg = arg  # type: ignore
-                remaining_args = args[i + 1 :]
-                break
-
-        if ctx_interaction_arg is None:
-            raise ValueError("Expected at least one positional argument for context.")
-
-        return ctx_interaction_arg, remaining_args, kwargs
 
     def add_slash_group(
         self,
@@ -118,11 +108,9 @@ class NextcordBot(DiscordBot[commands.Bot]):
         callback: Callable[..., Any],
         **extras: Any,
     ) -> nextcord.SlashApplicationCommand:
-        callback = self._inject_fake_interaction(callback)
-        group = self._bot.slash_command(name=name, description=description, **extras)(
-            callback
+        return self._bot.slash_command(name=name, description=description, **extras)(
+            self._inject_fake_interaction(callback)
         )
-        return group
 
     def add_slash_command(
         self,
@@ -135,13 +123,16 @@ class NextcordBot(DiscordBot[commands.Bot]):
     ) -> nextcord.SlashApplicationCommand | nextcord.SlashApplicationSubcommand:
         callback = self._inject_fake_interaction(callback)
         if parent:
-            return parent.subcommand(name=name, description=description, **extras)(
-                callback
+            # Cast the subcommand decorator explicitly to clear the "partially unknown" type
+            decorator = cast(
+                Any, parent.subcommand(name=name, description=description, **extras)
             )
-        else:
-            return self._bot.slash_command(
-                name=name, description=description, **extras
-            )(callback)
+            return decorator(callback)
+
+        decorator = cast(
+            Any, self._bot.slash_command(name=name, description=description, **extras)
+        )
+        return decorator(callback)
 
     def add_user_command(
         self,
