@@ -89,7 +89,6 @@ class DisnakeBot(DiscordBot[commands.Bot]):
     def parse_args_and_kwargs(
         self, args: tuple[Any, ...], kwargs: dict[str, Any]
     ) -> tuple[tuple[Any, ...], dict[str, Any]]:
-        print("parse_args_and_kwargs called with args", args, "and kwargs", kwargs)
         if not args:
             raise ValueError("Expected at least one positional argument for context.")
 
@@ -108,14 +107,6 @@ class DisnakeBot(DiscordBot[commands.Bot]):
         if "self" in kwargs:
             kwargs.pop("self")
 
-        print(
-            "parse_args_and_kwargs returning ctx_interaction_arg",
-            ctx_interaction_arg,
-            "remaining_args",
-            remaining_args,
-            "kwargs",
-            kwargs,
-        )
         return ctx_interaction_arg, remaining_args, kwargs
 
     def add_slash_group(
