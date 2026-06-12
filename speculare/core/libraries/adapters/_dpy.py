@@ -9,6 +9,8 @@ from discord.ext import commands
 
 from .._base import DiscordBot
 
+__all__ = ()
+
 
 class DpyBot(DiscordBot[commands.Bot]):
     _bot: commands.Bot
@@ -22,6 +24,25 @@ class DpyBot(DiscordBot[commands.Bot]):
 
     def _register_prefix(self, cmd: commands.Command[Any, Any, Any]) -> None:
         cmd.cog = self._cog
+
+    def parse_args_and_kwargs(
+        self, *args: Any, **kwargs: Any
+    ) -> tuple[tuple[Any, ...], dict[str, Any]]:
+        if not args:
+            raise ValueError("Expected at least one positional argument for context.")
+
+        ctx_interaction_arg: Any = None
+        remaining_args: tuple[Any, ...] = ()
+        for i, arg in enumerate(args):
+            if isinstance(arg, (discord.Interaction, commands.Context)):
+                ctx_interaction_arg = arg  # type: ignore
+                remaining_args = args[i + 1 :]
+                break
+
+        if ctx_interaction_arg is None:
+            raise ValueError("Expected at least one positional argument for context.")
+
+        return (ctx_interaction_arg, *remaining_args), kwargs
 
     def add_prefix_group(
         self,
