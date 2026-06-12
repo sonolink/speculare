@@ -95,11 +95,9 @@ class DisnakeBot(DiscordBot[commands.Bot]):
         callback: Callable[..., Any],
         **extras: Any,
     ) -> commands.InvokableSlashCommand:
-        return self._bot.slash_command(
-            name=name,
-            description=description,
-            **extras
-        )(self._inject_fake_interaction(callback))
+        return self._bot.slash_command(name=name, description=description, **extras)(
+            self._inject_fake_interaction(callback)
+        )
 
     def add_slash_command(
         self,
@@ -117,11 +115,9 @@ class DisnakeBot(DiscordBot[commands.Bot]):
                 description=description,
                 **extras,
             )(callback)
-        return self._bot.slash_command(
-            name=name,
-            description=description,
-            **extras
-        )(callback)
+        return self._bot.slash_command(name=name, description=description, **extras)(
+            callback
+        )
 
     def add_user_command(
         self,
