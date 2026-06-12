@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import disnake
 from disnake.ext import commands
@@ -20,8 +21,34 @@ class DisnakeBot(DiscordBot[commands.Bot]):
         self._cog: commands.Cog = commands.Cog.__new__(commands.Cog)
         self._cog.__cog_name__ = "speculare"
 
-    def _register_prefix(self, cmd: commands.Command[Any, Any, Any]) -> None:
-        cmd.cog = self._cog
+    def parse_args_and_kwargs(
+        self, args: tuple[Any, ...], kwargs: dict[str, Any]
+    ) -> tuple[Any, tuple[Any, ...], dict[str, Any]]:
+        for i, arg in enumerate(args):
+            if isinstance(arg, (disnake.Interaction, commands.Context)):
+                kwargs.pop("self", None)
+                return cast(Any, arg), args[i + 1 :], kwargs
+        raise ValueError("Expected at least one positional argument for context.")
+
+    def _inject_fake_interaction(
+        self, callback: Callable[..., Any]
+    ) -> Callable[..., Any]:
+        sig = inspect.signature(callback)
+        parameters = list(sig.parameters.values())
+        if not parameters:
+            return callback
+
+        async def wrapper(ctx: commands.Context[Any], *args: Any, **kwargs: Any) -> Any:
+            return await callback(ctx, *args, **kwargs)
+
+        parameters[1] = parameters[1].replace(
+            annotation=disnake.ApplicationCommandInteraction,
+            kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        )
+        wrapper.__signature__ = sig.replace(parameters=parameters)  # pyright: ignore[reportFunctionMemberAccess]
+        wrapper.__qualname__ = callback.__qualname__
+        wrapper.__name__ = callback.__name__
+        return wrapper
 
     def add_prefix_group(
         self,
@@ -38,7 +65,7 @@ class DisnakeBot(DiscordBot[commands.Bot]):
             **extras,
         )
         group.cog = self._cog
-        self._bot.add_command(group)
+        self._bot.add_command(group)  # type: ignore[arg-type]
         return group
 
     def add_prefix_command(
@@ -50,64 +77,15 @@ class DisnakeBot(DiscordBot[commands.Bot]):
         parent: commands.Group[Any, ..., Any] | None = None,
         **extras: Any,
     ) -> commands.Command[Any, Any, Any]:
-        cmd = commands.Command(callback, name=name, description=description, **extras)
-        cmd.cog = self._cog
-        (parent or self._bot).add_command(cmd)
-        return cmd
-
-    def _inject_fake_interaction(
-        self, callback: Callable[..., Any]
-    ) -> Callable[..., Any]:
-        from disnake import ApplicationCommandInteraction
-
-        async def wrapper(
-            ctx,
-            *args: Any,
-            **kwargs: Any,
-        ) -> Any:
-            return await callback(ctx, *args, **kwargs)
-
-        import inspect
-
-        sig = inspect.signature(callback)
-        params = sig.parameters
-        if not params:
-            return callback
-
-        # [self, ctx: CommandContext, ...]
-        new_parameters: list[inspect.Parameter] = list(params.values())
-        # ctx: CommandContext -> ctx: ApplicationCommandInteraction
-        new_parameters[1] = new_parameters[1].replace(
-            annotation=ApplicationCommandInteraction,
-            kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        cmd = commands.Command(
+            callback,
+            name=name,
+            description=description,
+            **extras,
         )
-        wrapper.__signature__ = sig.replace(parameters=new_parameters)  # pyright: ignore[reportFunctionMemberAccess]
-        wrapper.__qualname__ = callback.__qualname__
-        wrapper.__name__ = callback.__name__
-        return wrapper
-
-    def parse_args_and_kwargs(
-        self, args: tuple[Any, ...], kwargs: dict[str, Any]
-    ) -> tuple[tuple[Any, ...], dict[str, Any]]:
-        if not args:
-            raise ValueError("Expected at least one positional argument for context.")
-
-        ctx_interaction_arg: Any = None
-        remaining_args: tuple[Any, ...] = ()
-        for i, arg in enumerate(args):
-            if isinstance(arg, (disnake.Interaction, commands.Context)):
-                ctx_interaction_arg = arg  # type: ignore
-                remaining_args = args[i + 1 :]
-                break
-
-        if ctx_interaction_arg is None:
-            raise ValueError("Expected at least one positional argument for context.")
-
-        # ???????????????????????????????
-        if "self" in kwargs:
-            kwargs.pop("self")
-
-        return ctx_interaction_arg, remaining_args, kwargs
+        cmd.cog = self._cog
+        (parent or self._bot).add_command(cmd)  # type: ignore[arg-type]
+        return cmd
 
     def add_slash_group(
         self,
@@ -117,11 +95,11 @@ class DisnakeBot(DiscordBot[commands.Bot]):
         callback: Callable[..., Any],
         **extras: Any,
     ) -> commands.InvokableSlashCommand:
-        callback = self._inject_fake_interaction(callback)
-        group = self._bot.slash_command(name=name, description=description, **extras)(
-            callback
-        )
-        return group
+        return self._bot.slash_command(
+            name=name,
+            description=description,
+            **extras
+        )(self._inject_fake_interaction(callback))
 
     def add_slash_command(
         self,
@@ -134,13 +112,16 @@ class DisnakeBot(DiscordBot[commands.Bot]):
     ) -> commands.InvokableSlashCommand | commands.SubCommand:
         callback = self._inject_fake_interaction(callback)
         if parent:
-            return parent.sub_command(name=name, description=description, **extras)(
-                callback
-            )
-        else:
-            return self._bot.slash_command(
-                name=name, description=description, **extras
+            return parent.sub_command(
+                name=name,
+                description=description,
+                **extras,
             )(callback)
+        return self._bot.slash_command(
+            name=name,
+            description=description,
+            **extras
+        )(callback)
 
     def add_user_command(
         self,
