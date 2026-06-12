@@ -15,6 +15,9 @@ class DiscordBot[ClientT: Any](ABC):
         self._bot: ClientT = bot
 
     @abstractmethod
+    def parse_args_and_kwargs(self, *args: Any, **kwargs: Any) -> tuple[Any, ...]: ...
+
+    @abstractmethod
     def add_prefix_group(
         self,
         *,

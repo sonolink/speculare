@@ -8,9 +8,7 @@ from discord.ext import commands
 
 from .._base import DiscordBot
 
-
-class PseudoCog(commands.Cog):
-    pass
+__all__ = ()
 
 
 class PycordBot(DiscordBot[commands.Bot]):
@@ -19,7 +17,27 @@ class PycordBot(DiscordBot[commands.Bot]):
 
     def __init__(self, bot: commands.Bot, /) -> None:
         super().__init__(bot)
-        self._cog = PseudoCog(bot)
+        self._cog: commands.Cog = commands.Cog.__new__(commands.Cog)
+        self._cog.__cog_name__ = "speculare"
+
+    def parse_args_and_kwargs(
+        self, *args: Any, **kwargs: Any
+    ) -> tuple[tuple[Any, ...], dict[str, Any]]:
+        if not args:
+            raise ValueError("Expected at least one positional argument for context.")
+
+        ctx_interaction_arg: Any = None
+        remaining_args: tuple[Any, ...] = ()
+        for i, arg in enumerate(args):
+            if isinstance(arg, (discord.Interaction, commands.Context)):
+                ctx_interaction_arg = arg  # type: ignore
+                remaining_args = args[i + 1 :]
+                break
+
+        if ctx_interaction_arg is None:
+            raise ValueError("Expected at least one positional argument for context.")
+
+        return (ctx_interaction_arg, *remaining_args), kwargs
 
     def add_prefix_group(
         self,

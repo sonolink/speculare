@@ -71,7 +71,7 @@ class FeatureCommand[**P, R]:
         self.category = category
         self._feature_instance: Any = None
 
-    def _make_callback(self) -> Callable[..., AnyCoroutine[Any]]:
+    def _make_callback(self, bot: DiscordBot[Any]) -> Callable[..., AnyCoroutine[Any]]:
         @functools.wraps(cast(Callable[..., Any], self.callback))
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             log.debug(
@@ -82,9 +82,8 @@ class FeatureCommand[**P, R]:
                 {k: type(v).__name__ for k, v in kwargs.items()},
             )
             callback = cast(Callable[..., AnyCoroutine[Any]], self.callback)
-            return await callback(
-                self._feature_instance, CommandContext(args[1]), *args[2:], **kwargs
-            )
+            ctx, args, kwargs = bot.parse_args_and_kwargs(args, kwargs)
+            return await callback(self._feature_instance, ctx, *args, **kwargs)
 
         return wrapper
 
@@ -110,7 +109,7 @@ class Feature:
         for _, value in getmembers(self):
             if not getattr(value, "__is_feature_command__", False):
                 continue
-                
+
             cmd: FeatureCommand[..., Any] = value.__command__
             self.__raw_commands__[cmd.category or self.category][
                 (cmd.name, cmd.command_type)
@@ -124,9 +123,12 @@ class Feature:
         # {(category_name, command_type)}; stored separately since they may not be hashable
         self.__category_objects__: dict[tuple[str, CommandType], Any] = {}
 
-    async def group_callback(self, *args: Any, **kwargs: Any) -> None:
+    async def group_callback(
+        self, ctx_interaction: Any, *args: Any, **kwargs: Any
+    ) -> None:
+        pass
         # placeholder callback for command groups, should never be called directly
-        raise NotImplementedError("This is a placeholder callback for command groups.")
+        # raise NotImplementedError("This is a placeholder callback for command groups.")
 
     def handle(self, bot: DiscordBot[Any]) -> None:
         for category_name, commands in self.__raw_commands__.items():
@@ -195,7 +197,7 @@ class Feature:
         feature_cmd: FeatureCommand[..., Any],
         category_object: Any,
     ) -> Any:
-        cb = feature_cmd._make_callback()
+        cb = feature_cmd._make_callback(bot)
         name = feature_cmd.name
         desc = feature_cmd.description
 
