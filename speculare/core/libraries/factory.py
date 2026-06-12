@@ -109,8 +109,8 @@ class DiscordBotFactory:
                     from .adapters._pycord import PycordBot as wrapper
                 case "disnake":
                     from .adapters._disnake import DisnakeBot as wrapper
-                # case "nextcord":
-                #    from .adapters._nextcord import NextcordBot as wrapper
+                case "nextcord":
+                    from .adapters._nextcord import NextcordBot as wrapper
                 case _:  # pyright: ignore[reportUnnecessaryComparison]
                     raise ValueError(f"Unsupported framework: {framework}")
 

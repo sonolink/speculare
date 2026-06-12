@@ -123,9 +123,7 @@ class Feature:
         # {(category_name, command_type)}; stored separately since they may not be hashable
         self.__category_objects__: dict[tuple[str, CommandType], Any] = {}
 
-    async def group_callback(
-        self, ctx_interaction: Any, *args: Any, **kwargs: Any
-    ) -> None:
+    async def group_callback(self, ctx_interaction: Any) -> None:
         pass
         # placeholder callback for command groups, should never be called directly
         # raise NotImplementedError("This is a placeholder callback for command groups.")
